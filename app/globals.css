@@ -1,26 +1,84 @@
+@import url("https://api.fontshare.com/v2/css?f[]=clash-display@400,500,600,700&display=swap");
 @import "tailwindcss";
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #1e293b;
+  --navy: #0a1628;
+  --navy-light: #152238;
+  --orange: #f97316;
+  --orange-dark: #ea580c;
+  --slate: #334155;
+  --slate-light: #64748b;
+  --card-shadow: 0 2px 16px -2px rgba(10, 22, 40, 0.07);
+  --card-shadow-hover: 0 8px 32px -4px rgba(10, 22, 40, 0.12);
+  --glass-bg: rgba(255, 255, 255, 0.92);
+  --nav-height: 4rem;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-navy: var(--navy);
+  --color-navy-light: var(--navy-light);
+  --color-orange: var(--orange);
+  --color-orange-dark: var(--orange-dark);
+  --color-slate: var(--slate);
+  --color-slate-light: var(--slate-light);
+  --font-sans: var(--font-inter);
+  --font-display: "Clash Display", var(--font-inter), system-ui, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), system-ui, sans-serif;
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.glass-dark {
+  background: rgba(10, 22, 40, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.card-shadow {
+  box-shadow: var(--card-shadow);
+}
+
+.card-hover {
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
+}
+
+.card-hover:hover {
+  box-shadow: var(--card-shadow-hover);
+}
+
+.section-padding {
+  @apply px-4 py-14 sm:px-6 md:py-16 lg:px-8 lg:py-20;
+}
+
+.section-padding-sm {
+  @apply px-4 py-10 sm:px-6 lg:px-8 lg:py-12;
+}
+
+.container-custom {
+  @apply mx-auto max-w-6xl;
+}
+
+.text-balance {
+  text-wrap: balance;
 }
