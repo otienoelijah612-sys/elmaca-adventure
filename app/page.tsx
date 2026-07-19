@@ -24,6 +24,7 @@ export default function Home() {
         <Merchandise />
         <Testimonials />
         <JoinCommunity />
+        <Contact />
       </main>
       <Footer />
       <FloatingWhatsApp />

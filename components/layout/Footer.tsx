@@ -1,8 +1,7 @@
 "use client";
 
 import Logo from "@/components/ui/Logo";
-import Button from "@/components/ui/Button";
-import { SITE, WHATSAPP_COMMUNITY_URL, NAV_LINKS } from "@/lib/constants";
+import { SITE, NAV_LINKS } from "@/lib/constants";
 import { scrollToSection } from "@/lib/utils";
 import {
   FacebookIcon,
@@ -109,15 +108,6 @@ export default function Footer() {
                 <InstagramIcon className="h-4 w-4" />
               </a>
             </div>
-            <Button
-              size="sm"
-              className="mt-6 w-full sm:w-auto"
-              onClick={() =>
-                window.open(WHATSAPP_COMMUNITY_URL, "_blank", "noopener,noreferrer")
-              }
-            >
-              Join Group Community
-            </Button>
           </div>
         </div>
 
