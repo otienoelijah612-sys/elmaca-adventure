@@ -21,7 +21,7 @@ export const SITE = {
 
 /** Never render this URL in the UI — use only for button navigation */
 export const WHATSAPP_COMMUNITY_URL =
-  "https://chat.whatsapp.com/JqAlT3TqsI388HPrR69JL9";
+  "https://chat.whatsapp.com/IMq1jjRaoYILMzYlspW3mV";
 
 export const NAV_LINKS = [
   { label: "Home", href: "#home" },
