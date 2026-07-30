@@ -9,40 +9,90 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://elmacaadventure.co.ke"),
+
   title: {
     default: "Elmaca Adventure | Explore Kenya & The World Differently",
     template: "%s | Elmaca Adventure",
   },
+
   description:
     "Elmaca Adventure brings people together through road trips, outdoor experiences, and meaningful connections across Kenya. Book your next adventure today.",
+
   keywords: [
-    "Kenya adventures",
-    "road trips Kenya",
-    "outdoor experiences",
     "Elmaca Adventure",
-    "safari Kenya",
-    "group travel Kenya",
+    "Kenya adventures",
+    "Adventure trips Kenya",
+    "Road trips Kenya",
+    "Outdoor experiences",
+    "Team building Kenya",
+    "Group travel Kenya",
+    "Travel Kenya",
     "Kisumu adventures",
+    "Nature adventures",
   ],
-  authors: [{ name: "Elmaca Adventure" }],
+
+  authors: [
+    {
+      name: "Elmaca Adventure",
+    },
+  ],
+
+  creator: "Elmaca Adventure",
+
+  publisher: "Elmaca Adventure",
+
+  alternates: {
+    canonical: "https://elmacaadventure.co.ke",
+  },
+
   openGraph: {
     title: "Elmaca Adventure | Explore Kenya & The World Differently",
     description:
-      "Road trips, adventures, and outdoor experiences across Kenya. Join us for professionally organized trips that build friendships and lasting memories.",
-    type: "website",
-    locale: "en_KE",
+      "Road trips, adventures, hiking, team building, and unforgettable outdoor experiences across Kenya.",
+
+    url: "https://elmacaadventure.co.ke",
+
     siteName: "Elmaca Adventure",
+
+    locale: "en_KE",
+
+    type: "website",
+
+    images: [
+      {
+        url: "/images/og-image.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Elmaca Adventure",
+      },
+    ],
   },
+
   twitter: {
     card: "summary_large_image",
-    title: "Elmaca Adventure",
+
+    title: "Elmaca Adventure | Explore Kenya & The World Differently",
+
     description:
-      "Explore Kenya & The World Differently. Road trips, adventures, and outdoor experiences.",
+      "Explore Kenya through road trips, hiking adventures, outdoor experiences, and meaningful connections.",
+
+    images: ["/images/og-image.jpg"],
   },
+
   robots: {
     index: true,
     follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-video-preview": -1,
+      "max-snippet": -1,
+    },
   },
+
+  category: "Travel",
 };
 
 export default function RootLayout({
