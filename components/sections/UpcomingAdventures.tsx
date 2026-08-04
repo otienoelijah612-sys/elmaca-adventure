@@ -157,49 +157,36 @@ export default function UpcomingAdventures() {
         />
 
         <div className="relative mx-auto max-w-5xl">
-          {/* Desktop */}
-          <div className="hidden gap-6 lg:grid lg:grid-cols-3">
-            {visibleIndices.map((idx) => (
-              <motion.div
-                key={`desktop-${adventures[idx].id}-${idx}`}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.4 }}
-                className={cn(
-                  idx !== currentIndex && "opacity-80 lg:opacity-100",
-                )}
-              >
-                <AdventureCard
-                  adventure={adventures[idx]}
-                  onBook={handleBook}
-                />
-              </motion.div>
-            ))}
-          </div>
-
-          {/* Mobile & Tablet */}
-          <div className="overflow-hidden lg:hidden">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={currentIndex}
-                drag="x"
-                dragConstraints={{ left: 0, right: 0 }}
-                dragElastic={0.2}
-                style={{ x: dragX }}
-                onDragEnd={handleDragEnd}
-                initial={{ opacity: 0, x: 60 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -60 }}
-                transition={{ duration: 0.4, ease: "easeInOut" }}
-                className="cursor-grab active:cursor-grabbing"
-              >
-                <AdventureCard
-                  adventure={adventures[currentIndex]}
-                  onBook={handleBook}
-                />
-              </motion.div>
-            </AnimatePresence>
-          </div>
+        {/* Desktop */}
+{slideCount === 1 ? (
+  <div className="hidden lg:flex justify-center">
+    <div className="w-full max-w-md">
+      <AdventureCard
+        adventure={adventures[0]}
+        onBook={handleBook}
+      />
+    </div>
+  </div>
+) : (
+  <div className="hidden gap-6 lg:grid lg:grid-cols-3">
+    {visibleIndices.map((idx) => (
+      <motion.div
+        key={`desktop-${adventures[idx].id}-${idx}`}
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.4 }}
+        className={cn(
+          idx !== currentIndex && "opacity-80 lg:opacity-100",
+        )}
+      >
+        <AdventureCard
+          adventure={adventures[idx]}
+          onBook={handleBook}
+        />
+      </motion.div>
+    ))}
+  </div>
+)}
 
           {/* Dots */}
           <div className="mt-8 flex items-center justify-center gap-2">

@@ -2,7 +2,7 @@
 
 import { SITE } from "@/lib/constants";
 import { cn } from "@/lib/utils";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, Copy, Smartphone, X } from "lucide-react";
 import { useCallback, useState } from "react";
 import Button from "./Button";
@@ -30,6 +30,24 @@ export default function BookingModal({
     }
   }, []);
 
+  const handleWhatsAppConfirmation = () => {
+    const message = `Hi Elmaca Adventure! I'd like to confirm my booking${
+      adventureTitle ? ` for ${adventureTitle}` : ""
+    }.
+
+Name:
+Phone Number:
+Amount Paid:
+M-Pesa Code:
+`;
+
+    window.open(
+      `https://wa.me/254748329718?text=${encodeURIComponent(message)}`,
+      "_blank",
+      "noopener,noreferrer",
+    );
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -42,6 +60,7 @@ export default function BookingModal({
             onClick={onClose}
             aria-hidden="true"
           />
+
           <motion.div
             role="dialog"
             aria-modal="true"
@@ -70,8 +89,11 @@ export default function BookingModal({
             >
               Book Your Slot
             </h3>
+
             {adventureTitle && (
-              <p className="mt-1 text-sm text-slate-light">{adventureTitle}</p>
+              <p className="mt-1 text-sm text-slate-light">
+                {adventureTitle}
+              </p>
             )}
 
             <div className="mt-6 space-y-4">
@@ -83,17 +105,22 @@ export default function BookingModal({
                 <p className="text-xs font-semibold uppercase tracking-wider text-slate-light">
                   Payment Method
                 </p>
+
                 <p className="mt-1 font-display text-lg font-semibold text-navy">
                   M-Pesa Buy Goods
                 </p>
 
                 <div className="mt-4 flex items-center justify-between rounded-lg bg-white p-4 card-shadow">
                   <div>
-                    <p className="text-xs text-slate-light">Till Number</p>
+                    <p className="text-xs text-slate-light">
+                      Till Number
+                    </p>
+
                     <p className="font-display text-2xl font-bold tracking-wide text-navy">
                       {SITE.mpesaTill}
                     </p>
                   </div>
+
                   <button
                     onClick={copyTill}
                     className={cn(
@@ -102,7 +129,6 @@ export default function BookingModal({
                         ? "bg-green-50 text-green-600"
                         : "bg-navy/5 text-navy hover:bg-navy/10",
                     )}
-                    aria-label="Copy till number"
                   >
                     {copied ? (
                       <>
@@ -121,28 +147,31 @@ export default function BookingModal({
 
               <ol className="space-y-3 text-sm text-slate">
                 <li className="flex gap-3">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-orange/10 text-xs font-bold text-orange">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-orange/10 text-xs font-bold text-orange">
                     1
                   </span>
-                  Open M-Pesa on your phone and select <strong>Buy Goods</strong>
+                  Open M-Pesa on your phone and select <strong>Buy Goods</strong>.
                 </li>
+
                 <li className="flex gap-3">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-orange/10 text-xs font-bold text-orange">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-orange/10 text-xs font-bold text-orange">
                     2
                   </span>
-                  Enter Till Number <strong>{SITE.mpesaTill}</strong>
+                  Enter Till Number <strong>{SITE.mpesaTill}</strong>.
                 </li>
+
                 <li className="flex gap-3">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-orange/10 text-xs font-bold text-orange">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-orange/10 text-xs font-bold text-orange">
                     3
                   </span>
-                  Enter the adventure amount and confirm payment
+                  Enter the adventure amount and complete the payment.
                 </li>
+
                 <li className="flex gap-3">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-orange/10 text-xs font-bold text-orange">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-orange/10 text-xs font-bold text-orange">
                     4
                   </span>
-                  Send your M-Pesa confirmation to us on WhatsApp
+                  Tap the button below to send your payment confirmation on WhatsApp.
                 </li>
               </ol>
             </div>
@@ -150,19 +179,16 @@ export default function BookingModal({
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Button
                 className="flex-1"
-                onClick={() => {
-                  window.open(
-                    `https://wa.me/${SITE.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(
-                      `Hi Elmaca Adventure! I'd like to confirm my booking${adventureTitle ? ` for ${adventureTitle}` : ""}.`,
-                    )}`,
-                    "_blank",
-                    "noopener,noreferrer",
-                  );
-                }}
+                onClick={handleWhatsAppConfirmation}
               >
                 Confirm on WhatsApp
               </Button>
-              <Button variant="ghost" className="flex-1" onClick={onClose}>
+
+              <Button
+                variant="ghost"
+                className="flex-1"
+                onClick={onClose}
+              >
                 Close
               </Button>
             </div>

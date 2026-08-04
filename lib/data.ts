@@ -31,7 +31,19 @@ export interface Testimonial {
   image: string;
 }
 
-export const adventures: Adventure[] = [];
+export const adventures: Adventure[] = [
+  {
+    id: "nandi-highlands-2026",
+    title: "Nandi Highlands Expedition",
+    date: "13 September 2026",
+    destination: "Nandi Highlands",
+    price: "KSh 2,599",
+    remainingSlots: 20,
+    description:
+      "Discover breathtaking highland scenery, enjoy professional photography, networking, transport, meals and unforgettable memories.",
+    image: "/events/nandi-highlands-poster.jpg",
+  },
+];
 
 export const galleryImages: GalleryImage[] = [
   {
