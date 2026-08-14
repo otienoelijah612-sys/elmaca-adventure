@@ -9,7 +9,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://elmacaadventure.co.ke"),
+  metadataBase: new URL("https://www.elmacaadventure.co.ke"),
 
   title: {
     default: "Elmaca Adventure | Explore Kenya & The World Differently",
@@ -39,19 +39,19 @@ export const metadata: Metadata = {
   ],
 
   creator: "Elmaca Adventure",
-
   publisher: "Elmaca Adventure",
 
   alternates: {
-    canonical: "https://elmacaadventure.co.ke",
+    canonical: "/",
   },
 
   openGraph: {
     title: "Elmaca Adventure | Explore Kenya & The World Differently",
+
     description:
       "Road trips, adventures, hiking, team building, and unforgettable outdoor experiences across Kenya.",
 
-    url: "https://elmacaadventure.co.ke",
+    url: "/",
 
     siteName: "Elmaca Adventure",
 
@@ -83,6 +83,7 @@ export const metadata: Metadata = {
   robots: {
     index: true,
     follow: true,
+
     googleBot: {
       index: true,
       follow: true,
