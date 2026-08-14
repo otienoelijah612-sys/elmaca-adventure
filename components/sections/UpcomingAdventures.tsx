@@ -1,23 +1,18 @@
 "use client";
 
+import { useState } from "react";
+import Image from "next/image";
+
 import BookingModal from "@/components/ui/BookingModal";
 import Button from "@/components/ui/Button";
 import SectionHeading from "@/components/ui/SectionHeading";
+
 import {
   SECTION_IDS,
   WHATSAPP_COMMUNITY_URL,
 } from "@/lib/constants";
+
 import { adventures, type Adventure } from "@/lib/data";
-import { cn } from "@/lib/utils";
-import {
-  AnimatePresence,
-  motion,
-  PanInfo,
-  useMotionValue,
-} from "framer-motion";
-import { Compass } from "lucide-react";
-import Image from "next/image";
-import { useCallback, useEffect, useState } from "react";
 
 function AdventureCard({
   adventure,
@@ -26,55 +21,123 @@ function AdventureCard({
   adventure: Adventure;
   onBook: (title: string) => void;
 }) {
+  const [previewOpen, setPreviewOpen] = useState(false);
+
   return (
-    <article className="flex h-full flex-col overflow-hidden rounded-xl bg-white card-shadow sm:rounded-2xl">
-      <div className="relative aspect-[4/5] overflow-hidden">
-        <Image
-          src={adventure.image}
-          alt={adventure.title}
-          fill
-          className="object-cover transition-transform duration-500 hover:scale-105"
-          sizes="(max-width: 768px) 100vw, 400px"
-        />
-      </div>
+    <>
+      <article className="w-full overflow-hidden rounded-2xl bg-white shadow-xl">
+        {/* Event Poster */}
+        <button
+          type="button"
+          onClick={() => setPreviewOpen(true)}
+          className="group relative block w-full cursor-pointer"
+          aria-label={`View ${adventure.title} poster`}
+        >
+          <div className="relative aspect-[4/5] w-full overflow-hidden">
+            <Image
+              src={adventure.image}
+              alt={adventure.title}
+              fill
+              priority
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 80vw, 500px"
+              className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+            />
 
-      <div className="flex flex-1 items-center justify-between gap-3 p-4 sm:p-6">
-        <p className="font-display text-xl font-bold text-navy sm:text-2xl">
-          {adventure.price}
-        </p>
+            {/* Desktop hover effect */}
+            <div className="absolute inset-0 hidden items-center justify-center bg-black/0 transition-colors duration-300 group-hover:bg-black/30 sm:flex">
+              <span className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-navy opacity-0 shadow-lg transition-opacity duration-300 group-hover:opacity-100">
+                🔍 View Poster
+              </span>
+            </div>
+          </div>
+        </button>
 
-        <Button size="sm" onClick={() => onBook(adventure.title)}>
-          Book Your Slot
-        </Button>
-      </div>
-    </article>
+        {/* Price + Booking Button */}
+        <div className="flex w-full items-center justify-between gap-4 p-4 sm:p-5">
+          <p className="shrink-0 text-xl font-bold text-navy sm:text-2xl">
+            {adventure.price}
+          </p>
+
+          <Button
+            size="sm"
+            onClick={() => onBook(adventure.title)}
+          >
+            Book Your Slot
+          </Button>
+        </div>
+      </article>
+
+      {/* Full-Screen Poster Preview */}
+      {previewOpen && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-3 sm:p-6"
+          onClick={() => setPreviewOpen(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${adventure.title} poster preview`}
+        >
+          <div
+            className="relative flex h-full w-full max-w-5xl items-center justify-center"
+            onClick={(event) => event.stopPropagation()}
+          >
+            {/* Close Button */}
+            <button
+              type="button"
+              onClick={() => setPreviewOpen(false)}
+              className="absolute right-0 top-0 z-10 rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/20 sm:right-2 sm:top-2"
+            >
+              ✕ Close
+            </button>
+
+            {/* Large Poster */}
+            <div className="relative h-[90vh] w-full">
+              <Image
+                src={adventure.image}
+                alt={adventure.title}
+                fill
+                sizes="100vw"
+                className="object-contain"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
 export default function UpcomingAdventures() {
-  const [currentIndex, setCurrentIndex] = useState(0);
   const [bookingOpen, setBookingOpen] = useState(false);
-  const [selectedAdventure, setSelectedAdventure] = useState<string>();
-  const dragX = useMotionValue(0);
+  const [selectedAdventure, setSelectedAdventure] =
+    useState<string>();
 
+  const handleBook = (title: string) => {
+    setSelectedAdventure(title);
+    setBookingOpen(true);
+  };
+
+  /*
+   * If there are no upcoming adventures,
+   * show the "Coming Soon" message.
+   */
   if (adventures.length === 0) {
     return (
       <section
         id={SECTION_IDS.adventures}
-        className="section-padding bg-white"
+        className="section-padding w-full bg-white"
       >
-        <div className="container-custom">
+        <div className="container-custom w-full">
           <SectionHeading
             label=""
             title="Upcoming Adventures"
             description=""
           />
 
-          <div className="mx-auto max-w-2xl">
-            <div className="rounded-2xl bg-white card-shadow px-6 py-12 text-center">
+          <div className="mx-auto w-full max-w-2xl">
+            <div className="rounded-2xl bg-white px-6 py-12 text-center shadow-xl">
               <div className="mb-5 flex justify-center">
                 <div className="flex h-14 w-14 items-center justify-center rounded-full bg-orange/10">
-                  <Compass className="h-7 w-7 text-orange" />
+                  <div className="text-2xl">🧭</div>
                 </div>
               </div>
 
@@ -87,15 +150,15 @@ export default function UpcomingAdventures() {
               </p>
 
               <div className="mt-8">
-              <a
-  href={WHATSAPP_COMMUNITY_URL}
-  target="_blank"
-  rel="noopener noreferrer"
->
-  <Button>
-    Join WhatsApp
-  </Button>
-</a>
+                <a
+                  href={WHATSAPP_COMMUNITY_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Button>
+                    Join WhatsApp
+                  </Button>
+                </a>
               </div>
             </div>
           </div>
@@ -104,109 +167,34 @@ export default function UpcomingAdventures() {
     );
   }
 
-  const slideCount = adventures.length;
+  /*
+   * Currently Elmaca has one upcoming adventure.
+   * The layout is intentionally simple and responsive.
+   */
+  const adventure: Adventure = adventures[0];
 
-  const goTo = useCallback(
-    (index: number) => {
-      setCurrentIndex(((index % slideCount) + slideCount) % slideCount);
-    },
-    [slideCount],
-  );
-
-  const next = useCallback(
-    () => goTo(currentIndex + 1),
-    [currentIndex, goTo],
-  );
-
-  const prev = useCallback(
-    () => goTo(currentIndex - 1),
-    [currentIndex, goTo],
-  );
-
-  useEffect(() => {
-    const timer = setInterval(next, 5000);
-    return () => clearInterval(timer);
-  }, [next]);
-
-  const handleDragEnd = (_: unknown, info: PanInfo) => {
-    const threshold = 50;
-
-    if (info.offset.x < -threshold) next();
-    else if (info.offset.x > threshold) prev();
-
-    dragX.set(0);
-  };
-
-  const handleBook = (title: string) => {
-    setSelectedAdventure(title);
-    setBookingOpen(true);
-  };
-
-  const visibleIndices = [
-    (currentIndex - 1 + slideCount) % slideCount,
-    currentIndex,
-    (currentIndex + 1) % slideCount,
-  ];
   return (
-    <section id={SECTION_IDS.adventures} className="section-padding bg-white">
-      <div className="container-custom">
+    <section
+      id={SECTION_IDS.adventures}
+      className="section-padding w-full bg-white"
+    >
+      <div className="container-custom w-full">
         <SectionHeading
           label=""
           title="Upcoming Adventures"
           description=""
         />
 
-        <div className="relative mx-auto max-w-5xl">
-        {/* Desktop */}
-{slideCount === 1 ? (
-  <div className="hidden lg:flex justify-center">
-    <div className="w-full max-w-md">
-      <AdventureCard
-        adventure={adventures[0]}
-        onBook={handleBook}
-      />
-    </div>
-  </div>
-) : (
-  <div className="hidden gap-6 lg:grid lg:grid-cols-3">
-    {visibleIndices.map((idx) => (
-      <motion.div
-        key={`desktop-${adventures[idx].id}-${idx}`}
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.4 }}
-        className={cn(
-          idx !== currentIndex && "opacity-80 lg:opacity-100",
-        )}
-      >
-        <AdventureCard
-          adventure={adventures[idx]}
-          onBook={handleBook}
-        />
-      </motion.div>
-    ))}
-  </div>
-)}
-
-          {/* Dots */}
-          <div className="mt-8 flex items-center justify-center gap-2">
-            {adventures.map((_, idx) => (
-              <button
-                key={idx}
-                onClick={() => goTo(idx)}
-                className={cn(
-                  "h-2 rounded-full transition-all duration-300",
-                  idx === currentIndex
-                    ? "w-8 bg-orange"
-                    : "w-2 bg-slate/20 hover:bg-slate/40",
-                )}
-                aria-label={`Go to adventure ${idx + 1}`}
-              />
-            ))}
-          </div>
+        {/* Responsive Adventure Card */}
+        <div className="mx-auto w-full max-w-md">
+          <AdventureCard
+            adventure={adventure}
+            onBook={handleBook}
+          />
         </div>
       </div>
 
+      {/* Booking Modal */}
       <BookingModal
         isOpen={bookingOpen}
         onClose={() => setBookingOpen(false)}
