@@ -19,7 +19,7 @@ function AdventureCard({
   onBook,
 }: {
   adventure: Adventure;
-  onBook: (title: string) => void;
+  onBook: (adventure: Adventure) => void;
 }) {
   const [previewOpen, setPreviewOpen] = useState(false);
 
@@ -60,7 +60,7 @@ function AdventureCard({
 
           <Button
             size="sm"
-            onClick={() => onBook(adventure.title)}
+            onClick={() => onBook(adventure)}
           >
             Book Your Slot
           </Button>
@@ -109,10 +109,10 @@ function AdventureCard({
 export default function UpcomingAdventures() {
   const [bookingOpen, setBookingOpen] = useState(false);
   const [selectedAdventure, setSelectedAdventure] =
-    useState<string>();
+    useState<Adventure | null>(null);
 
-  const handleBook = (title: string) => {
-    setSelectedAdventure(title);
+  const handleBook = (adventure: Adventure) => {
+    setSelectedAdventure(adventure);
     setBookingOpen(true);
   };
 
@@ -173,6 +173,12 @@ export default function UpcomingAdventures() {
    */
   const adventure: Adventure = adventures[0];
 
+  // Convert the displayed price, e.g.
+  // "KSh 2,599" → 2599
+  const adventurePrice = Number(
+    adventure.price.replace(/[^0-9]/g, ""),
+  );
+
   return (
     <section
       id={SECTION_IDS.adventures}
@@ -195,11 +201,17 @@ export default function UpcomingAdventures() {
       </div>
 
       {/* Booking Modal */}
-      <BookingModal
-        isOpen={bookingOpen}
-        onClose={() => setBookingOpen(false)}
-        adventureTitle={selectedAdventure}
-      />
+      {selectedAdventure && (
+        <BookingModal
+          isOpen={bookingOpen}
+          onClose={() => {
+            setBookingOpen(false);
+            setSelectedAdventure(null);
+          }}
+          adventureTitle={selectedAdventure.title}
+          adventurePrice={adventurePrice}
+        />
+      )}
     </section>
   );
 }
