@@ -53,16 +53,7 @@ export async function GET(
         await supabaseServer
           .from("bookings")
           .select(
-            [
-              "booking_id",
-              "adventure_title",
-              "total_amount",
-              "total_paid",
-              "remaining_balance",
-              "status",
-              "created_at",
-              "updated_at",
-            ].join(", "),
+            "booking_id, adventure_title, total_amount, total_paid, remaining_balance, status, created_at, updated_at",
           )
           .eq(
             "booking_id",
@@ -110,22 +101,7 @@ export async function GET(
         await supabaseServer
           .from("payments")
           .select(
-            [
-              "id",
-              "checkout_request_id",
-              "merchant_request_id",
-              "adventure_title",
-              "phone_number",
-              "amount",
-              "receipt_number",
-              "transaction_date",
-              "status",
-              "result_code",
-              "result_desc",
-              "received_at",
-              "created_at",
-              "booking_id",
-            ].join(", "),
+            "id, checkout_request_id, merchant_request_id, adventure_title, phone_number, amount, receipt_number, transaction_date, status, result_code, result_desc, received_at, created_at, booking_id",
           )
           .eq(
             "booking_id",
@@ -252,16 +228,7 @@ export async function GET(
       await supabaseServer
         .from("bookings")
         .select(
-          [
-            "booking_id",
-            "adventure_title",
-            "total_amount",
-            "total_paid",
-            "remaining_balance",
-            "status",
-            "created_at",
-            "updated_at",
-          ].join(", "),
+          "booking_id, adventure_title, total_amount, total_paid, remaining_balance, status, created_at, updated_at",
         )
         .order(
           "created_at",
@@ -298,8 +265,8 @@ export async function GET(
       await supabaseServer
         .from("payments")
         .select(
-            "booking_id, phone_number, amount, receipt_number, status, transaction_date, created_at",
-          )
+          "booking_id, phone_number, amount, receipt_number, status, transaction_date, created_at",
+        )
         .order(
           "created_at",
           {
