@@ -298,16 +298,8 @@ export async function GET(
       await supabaseServer
         .from("payments")
         .select(
-          [
-            "booking_id",
-            "phone_number",
-            "amount",
-            "receipt_number",
-            "status",
-            "transaction_date",
-            "created_at",
-          ].join(", "),
-        )
+            "booking_id, phone_number, amount, receipt_number, status, transaction_date, created_at",
+          )
         .order(
           "created_at",
           {
