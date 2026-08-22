@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY;
+const supabaseUrl =
+  process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+const supabaseSecretKey =
+  process.env.SUPABASE_SECRET_KEY;
 
 if (!supabaseUrl || !supabaseSecretKey) {
   throw new Error(
@@ -23,28 +26,62 @@ const supabase = createClient(
 
 export async function POST(request: Request) {
   try {
+    // ----------------------------------------
+    // Read request
+    // ----------------------------------------
+
     const body = await request.json();
 
     const {
       adventureTitle,
       totalAmount,
+      customerName,
     } = body;
 
     // ----------------------------------------
-    // Validate request
+    // Validate customer name
     // ----------------------------------------
 
-    if (!adventureTitle || !totalAmount) {
+    const cleanCustomerName =
+      typeof customerName === "string"
+        ? customerName.trim()
+        : "";
+
+    if (!cleanCustomerName) {
       return NextResponse.json(
         {
           error:
-            "Adventure title and total amount are required.",
+            "Customer name is required.",
         },
         { status: 400 },
       );
     }
 
-    const numericAmount = Number(totalAmount);
+    // ----------------------------------------
+    // Validate adventure
+    // ----------------------------------------
+
+    const cleanAdventureTitle =
+      typeof adventureTitle === "string"
+        ? adventureTitle.trim()
+        : "";
+
+    if (!cleanAdventureTitle) {
+      return NextResponse.json(
+        {
+          error:
+            "Adventure title is required.",
+        },
+        { status: 400 },
+      );
+    }
+
+    // ----------------------------------------
+    // Validate amount
+    // ----------------------------------------
+
+    const numericAmount =
+      Number(totalAmount);
 
     if (
       !Number.isFinite(numericAmount) ||
@@ -64,27 +101,46 @@ export async function POST(request: Request) {
     // ----------------------------------------
 
     const bookingId =
-      `ELM-${Date.now().toString(36).toUpperCase()}`;
+      `ELM-${Date.now()
+        .toString(36)
+        .toUpperCase()}`;
 
     // ----------------------------------------
     // Create booking
     // ----------------------------------------
 
-    const { data, error } =
-      await supabase
-        .from("bookings")
-        .insert({
-          booking_id: bookingId,
-          adventure_title: String(
-            adventureTitle,
-          ),
-          total_amount: numericAmount,
-          total_paid: 0,
-          remaining_balance: numericAmount,
-          status: "pending",
-        })
-        .select()
-        .single();
+    const {
+      data,
+      error,
+    } = await supabase
+      .from("bookings")
+      .insert({
+        booking_id: bookingId,
+
+        customer_name:
+          cleanCustomerName,
+
+        adventure_title:
+          cleanAdventureTitle,
+
+        total_amount:
+          numericAmount,
+
+        total_paid:
+          0,
+
+        remaining_balance:
+          numericAmount,
+
+        status:
+          "pending",
+      })
+      .select()
+      .single();
+
+    // ----------------------------------------
+    // Handle database error
+    // ----------------------------------------
 
     if (error) {
       console.error(
@@ -102,6 +158,10 @@ export async function POST(request: Request) {
       );
     }
 
+    // ----------------------------------------
+    // Log successful booking
+    // ----------------------------------------
+
     console.log(
       "Booking created:",
       JSON.stringify(
@@ -110,6 +170,10 @@ export async function POST(request: Request) {
         2,
       ),
     );
+
+    // ----------------------------------------
+    // Return booking
+    // ----------------------------------------
 
     return NextResponse.json(
       {

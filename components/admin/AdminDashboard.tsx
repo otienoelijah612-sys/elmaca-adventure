@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 interface Booking {
   bookingId: string;
+  customerName: string | null;
   adventureTitle: string;
   totalAmount: number;
   totalPaid: number;
@@ -28,10 +29,7 @@ interface Payment {
   phoneNumber: string | null;
   amount: number;
   receiptNumber: string | null;
-  transactionDate:
-    | string
-    | number
-    | null;
+  transactionDate: string | number | null;
   status:
     | "pending"
     | "success"
@@ -58,6 +56,7 @@ interface DashboardData {
 interface BookingDetailsData {
   booking: {
     bookingId: string;
+    customerName: string | null;
     adventureTitle: string;
     totalAmount: number;
     totalPaid: number;
@@ -85,340 +84,234 @@ export default function AdminDashboard() {
   // Authentication
   // ----------------------------------------
 
-  const [password, setPassword] =
-    useState("");
-
-  const [loggedIn, setLoggedIn] =
-    useState(false);
-
-  const [checkingAuth, setCheckingAuth] =
-    useState(true);
-
-  const [loading, setLoading] =
-    useState(false);
+  const [password, setPassword] = useState("");
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   // ----------------------------------------
   // Dashboard
   // ----------------------------------------
 
-  const [
-    dashboardLoading,
-    setDashboardLoading,
-  ] = useState(false);
+  const [dashboardLoading, setDashboardLoading] =
+    useState(false);
 
   const [data, setData] =
-    useState<DashboardData | null>(
-      null,
-    );
+    useState<DashboardData | null>(null);
 
-  const [
-    lastUpdated,
-    setLastUpdated,
-  ] = useState<Date | null>(null);
+  const [lastUpdated, setLastUpdated] =
+    useState<Date | null>(null);
 
-  const [
-    bookingFilter,
-    setBookingFilter,
-  ] = useState<BookingFilter>(
-    "all",
-  );
+  const [bookingFilter, setBookingFilter] =
+    useState<BookingFilter>("all");
 
-  const [
-    searchQuery,
-    setSearchQuery,
-  ] = useState("");
+  const [searchQuery, setSearchQuery] =
+    useState("");
 
   // ----------------------------------------
   // Booking details
   // ----------------------------------------
 
-  const [
-    selectedBooking,
-    setSelectedBooking,
-  ] =
-    useState<BookingDetailsData | null>(
-      null,
-    );
+  const [selectedBooking, setSelectedBooking] =
+    useState<BookingDetailsData | null>(null);
 
-  const [
-    detailsLoading,
-    setDetailsLoading,
-  ] = useState(false);
+  const [detailsLoading, setDetailsLoading] =
+    useState(false);
 
   // ----------------------------------------
   // Errors
   // ----------------------------------------
 
-  const [error, setError] =
-    useState("");
+  const [error, setError] = useState("");
 
   // ----------------------------------------
   // Helpers
   // ----------------------------------------
 
-  const money = (
-    amount: number,
-  ) =>
+  const money = (amount: number) =>
     `KSh ${amount.toLocaleString()}`;
 
-  const formatDate = (
-    value: string | null,
-  ) => {
+  const formatDate = (value: string | null) => {
     if (!value) {
       return "—";
     }
 
-    const date =
-      new Date(value);
+    const date = new Date(value);
 
-    if (
-      Number.isNaN(
-        date.getTime(),
-      )
-    ) {
+    if (Number.isNaN(date.getTime())) {
       return "—";
     }
 
-    return date.toLocaleString(
-      "en-KE",
-      {
-        dateStyle: "medium",
-        timeStyle: "short",
-      },
-    );
+    return date.toLocaleString("en-KE", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
   };
 
   const formatTransactionDate = (
-    value:
-      | string
-      | number
-      | null,
+    value: string | number | null,
   ) => {
     if (value === null) {
       return "—";
     }
 
-    const raw =
-      String(value);
+    const raw = String(value);
 
-    if (
-      /^\d{14}$/.test(raw)
-    ) {
-      const year =
-        Number(
-          raw.slice(0, 4),
-        );
+    if (/^\d{14}$/.test(raw)) {
+      const year = Number(raw.slice(0, 4));
+      const month = Number(raw.slice(4, 6)) - 1;
+      const day = Number(raw.slice(6, 8));
+      const hour = Number(raw.slice(8, 10));
+      const minute = Number(raw.slice(10, 12));
+      const second = Number(raw.slice(12, 14));
 
-      const month =
-        Number(
-          raw.slice(4, 6),
-        ) - 1;
-
-      const day =
-        Number(
-          raw.slice(6, 8),
-        );
-
-      const hour =
-        Number(
-          raw.slice(8, 10),
-        );
-
-      const minute =
-        Number(
-          raw.slice(10, 12),
-        );
-
-      const second =
-        Number(
-          raw.slice(12, 14),
-        );
-
-      const date =
-        new Date(
-          year,
-          month,
-          day,
-          hour,
-          minute,
-          second,
-        );
-
-      return date.toLocaleString(
-        "en-KE",
-        {
-          dateStyle:
-            "medium",
-          timeStyle:
-            "short",
-        },
+      const date = new Date(
+        year,
+        month,
+        day,
+        hour,
+        minute,
+        second,
       );
+
+      return date.toLocaleString("en-KE", {
+        dateStyle: "medium",
+        timeStyle: "short",
+      });
     }
 
-    return formatDate(
-      raw,
-    );
+    return formatDate(raw);
   };
 
   // ----------------------------------------
   // Load dashboard
   // ----------------------------------------
 
-  const loadDashboard =
-    async () => {
-      setDashboardLoading(true);
-      setError("");
+  const loadDashboard = async () => {
+    setDashboardLoading(true);
+    setError("");
 
-      try {
-        const response =
-          await fetch(
-            "/api/admin/bookings",
-            {
-              cache:
-                "no-store",
-            },
-          );
+    try {
+      const response = await fetch(
+        "/api/admin/bookings",
+        {
+          cache: "no-store",
+        },
+      );
 
-        if (
-          response.status ===
-          401
-        ) {
-          setLoggedIn(false);
-          setData(null);
-          return;
-        }
+      if (response.status === 401) {
+        setLoggedIn(false);
+        setData(null);
+        return;
+      }
 
-        const result =
-          await response.json();
+      const result = await response.json();
 
-        if (!response.ok) {
-          throw new Error(
-            result?.error ||
-              "Unable to load dashboard.",
-          );
-        }
-
-        setData(result);
-        setLoggedIn(true);
-        setLastUpdated(new Date());
-      } catch (err) {
-        console.error(
-          "Dashboard load error:",
-          err,
-        );
-
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Unable to load dashboard.",
-        );
-      } finally {
-        setDashboardLoading(
-          false,
+      if (!response.ok) {
+        throw new Error(
+          result?.error ||
+            "Unable to load dashboard.",
         );
       }
-    };
+
+      setData(result);
+      setLoggedIn(true);
+      setLastUpdated(new Date());
+    } catch (err) {
+      console.error(
+        "Dashboard load error:",
+        err,
+      );
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to load dashboard.",
+      );
+    } finally {
+      setDashboardLoading(false);
+    }
+  };
 
   // ----------------------------------------
   // Load booking details
   // ----------------------------------------
 
-  const loadBookingDetails =
-    async (
-      bookingId: string,
-    ) => {
-      setDetailsLoading(true);
-      setError("");
+  const loadBookingDetails = async (
+    bookingId: string,
+  ) => {
+    setDetailsLoading(true);
+    setError("");
 
-      try {
-        const response =
-          await fetch(
-            `/api/admin/bookings?bookingId=${encodeURIComponent(
-              bookingId,
-            )}`,
-            {
-              cache:
-                "no-store",
-            },
-          );
+    try {
+      const response = await fetch(
+        `/api/admin/bookings?bookingId=${encodeURIComponent(
+          bookingId,
+        )}`,
+        {
+          cache: "no-store",
+        },
+      );
 
-        if (
-          response.status ===
-          401
-        ) {
-          setLoggedIn(false);
-          setSelectedBooking(
-            null,
-          );
-          return;
-        }
+      if (response.status === 401) {
+        setLoggedIn(false);
+        setSelectedBooking(null);
+        return;
+      }
 
-        const result =
-          await response.json();
+      const result = await response.json();
 
-        if (!response.ok) {
-          throw new Error(
-            result?.error ||
-              "Unable to load booking details.",
-          );
-        }
-
-        setSelectedBooking(
-          result,
-        );
-      } catch (err) {
-        console.error(
-          "Booking details error:",
-          err,
-        );
-
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Unable to load booking details.",
-        );
-      } finally {
-        setDetailsLoading(
-          false,
+      if (!response.ok) {
+        throw new Error(
+          result?.error ||
+            "Unable to load booking details.",
         );
       }
-    };
+
+      setSelectedBooking(result);
+    } catch (err) {
+      console.error(
+        "Booking details error:",
+        err,
+      );
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to load booking details.",
+      );
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
 
   // ----------------------------------------
   // Authentication check
   // ----------------------------------------
 
   useEffect(() => {
-    const checkAuth =
-      async () => {
-        try {
-          const response =
-            await fetch(
-              "/api/admin/bookings",
-              {
-                cache:
-                  "no-store",
-              },
-            );
+    const checkAuth = async () => {
+      try {
+        const response = await fetch(
+          "/api/admin/bookings",
+          {
+            cache: "no-store",
+          },
+        );
 
-          if (
-            response.ok
-          ) {
-            const result =
-              await response.json();
+        if (response.ok) {
+          const result = await response.json();
 
-            setData(result);
-            setLoggedIn(true);
-            setLastUpdated(new Date());
-          }
-        } catch {
-          // Not logged in.
-        } finally {
-          setCheckingAuth(
-            false,
-          );
+          setData(result);
+          setLoggedIn(true);
+          setLastUpdated(new Date());
         }
-      };
+      } catch {
+        // Not logged in.
+      } finally {
+        setCheckingAuth(false);
+      }
+    };
 
     checkAuth();
   }, []);
@@ -427,90 +320,79 @@ export default function AdminDashboard() {
   // Login
   // ----------------------------------------
 
-  const handleLogin =
-    async (
-      event: React.FormEvent,
-    ) => {
-      event.preventDefault();
+  const handleLogin = async (
+    event: React.FormEvent,
+  ) => {
+    event.preventDefault();
 
-      if (!password.trim()) {
-        setError(
-          "Enter your admin password.",
+    if (!password.trim()) {
+      setError(
+        "Enter your admin password.",
+      );
+
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await fetch(
+        "/api/admin/login",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            password,
+          }),
+        },
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result?.error ||
+            "Login failed.",
         );
-
-        return;
       }
 
-      setLoading(true);
-      setError("");
+      setPassword("");
+      setLoggedIn(true);
 
-      try {
-        const response =
-          await fetch(
-            "/api/admin/login",
-            {
-              method:
-                "POST",
-
-              headers: {
-                "Content-Type":
-                  "application/json",
-              },
-
-              body:
-                JSON.stringify({
-                  password,
-                }),
-            },
-          );
-
-        const result =
-          await response.json();
-
-        if (!response.ok) {
-          throw new Error(
-            result?.error ||
-              "Login failed.",
-          );
-        }
-
-        setPassword("");
-        setLoggedIn(true);
-
-        await loadDashboard();
-      } catch (err) {
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Login failed.",
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
+      await loadDashboard();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Login failed.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // ----------------------------------------
   // Logout
   // ----------------------------------------
 
-  const handleLogout =
-    async () => {
-      try {
-        await fetch(
-          "/api/admin/logout",
-          {
-            method:
-              "POST",
-          },
-        );
-      } finally {
-        setLoggedIn(false);
-        setData(null);
-        setSelectedBooking(
-          null,
-        );
-      }
-    };
+  const handleLogout = async () => {
+    try {
+      await fetch(
+        "/api/admin/logout",
+        {
+          method: "POST",
+        },
+      );
+    } finally {
+      setLoggedIn(false);
+      setData(null);
+      setSelectedBooking(null);
+    }
+  };
 
   // ----------------------------------------
   // Export bookings to CSV
@@ -521,12 +403,15 @@ export default function AdminDashboard() {
       data?.bookings ?? [];
 
     if (bookings.length === 0) {
-      setError("There are no bookings to export.");
+      setError(
+        "There are no bookings to export.",
+      );
       return;
     }
 
     const headers = [
       "Booking ID",
+      "Customer Name",
       "Adventure",
       "M-Pesa Number",
       "Total",
@@ -542,16 +427,21 @@ export default function AdminDashboard() {
       value: string | number | null,
     ) => {
       const stringValue =
-        value === null || value === undefined
+        value === null ||
+        value === undefined
           ? ""
           : String(value);
 
-      return `"${stringValue.replace(/"/g, '""')}"`;
+      return `"${stringValue.replace(
+        /"/g,
+        '""',
+      )}"`;
     };
 
     const rows = bookings.map(
       (booking) => [
         booking.bookingId,
+        booking.customerName ?? "",
         booking.adventureTitle,
         booking.phoneNumber ?? "",
         booking.totalAmount,
@@ -560,20 +450,30 @@ export default function AdminDashboard() {
         booking.status,
         booking.paymentCount,
         booking.latestReceipt ?? "",
-        formatDate(booking.createdAt),
+        formatDate(
+          booking.createdAt,
+        ),
       ],
     );
 
     const csv = [
-      headers.map(escapeCSV).join(","),
+      headers
+        .map(escapeCSV)
+        .join(","),
       ...rows.map((row) =>
-        row.map(escapeCSV).join(","),
+        row
+          .map(escapeCSV)
+          .join(","),
       ),
     ].join("\r\n");
 
-    const blob = new Blob([csv], {
-      type: "text/csv;charset=utf-8;",
-    });
+    const blob = new Blob(
+      [csv],
+      {
+        type:
+          "text/csv;charset=utf-8;",
+      },
+    );
 
     const url =
       URL.createObjectURL(blob);
@@ -587,18 +487,15 @@ export default function AdminDashboard() {
         .slice(0, 10);
 
     link.href = url;
+
     link.download =
       `elmaca-bookings-${date}.csv`;
 
-    document.body.appendChild(
-      link,
-    );
+    document.body.appendChild(link);
 
     link.click();
 
-    document.body.removeChild(
-      link,
-    );
+    document.body.removeChild(link);
 
     URL.revokeObjectURL(url);
   };
@@ -642,9 +539,7 @@ export default function AdminDashboard() {
           </div>
 
           <form
-            onSubmit={
-              handleLogin
-            }
+            onSubmit={handleLogin}
             className="space-y-4"
           >
             <div>
@@ -660,12 +555,9 @@ export default function AdminDashboard() {
                 type="password"
                 autoComplete="current-password"
                 value={password}
-                onChange={(
-                  event,
-                ) =>
+                onChange={(event) =>
                   setPassword(
-                    event.target
-                      .value,
+                    event.target.value,
                   )
                 }
                 placeholder="Enter admin password"
@@ -723,6 +615,14 @@ export default function AdminDashboard() {
               normalizedSearch,
             ) ||
           (
+            booking.customerName ??
+            ""
+          )
+            .toLowerCase()
+            .includes(
+              normalizedSearch,
+            ) ||
+          (
             booking.phoneNumber ??
             ""
           )
@@ -741,6 +641,7 @@ export default function AdminDashboard() {
   return (
     <main className="min-h-screen bg-slate-50">
       {/* Header */}
+
       <header className="border-b bg-navy">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-5 sm:px-6 lg:px-8">
           <div>
@@ -758,8 +659,10 @@ export default function AdminDashboard() {
                 ? lastUpdated.toLocaleString(
                     "en-KE",
                     {
-                      dateStyle: "medium",
-                      timeStyle: "short",
+                      dateStyle:
+                        "medium",
+                      timeStyle:
+                        "short",
                     },
                   )
                 : "Not updated yet"}
@@ -769,9 +672,7 @@ export default function AdminDashboard() {
           <div className="flex flex-wrap items-center justify-end gap-2">
             <button
               type="button"
-              onClick={
-                loadDashboard
-              }
+              onClick={loadDashboard}
               disabled={
                 dashboardLoading
               }
@@ -810,6 +711,7 @@ export default function AdminDashboard() {
 
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {/* Error */}
+
         {error && (
           <div className="mb-6 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
             {error}
@@ -817,6 +719,7 @@ export default function AdminDashboard() {
         )}
 
         {/* Summary */}
+
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <SummaryCard
             label="Total Bookings"
@@ -852,6 +755,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Status */}
+
         <div className="mt-6 grid gap-4 sm:grid-cols-3">
           <MiniStatus
             label="Pending"
@@ -879,6 +783,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Bookings */}
+
         <section className="mt-8 overflow-hidden rounded-2xl bg-white shadow-sm">
           <div className="border-b px-6 py-5">
             <h2 className="text-lg font-bold text-navy">
@@ -886,6 +791,7 @@ export default function AdminDashboard() {
             </h2>
 
             {/* Search */}
+
             <div className="mt-4">
               <label
                 htmlFor="bookingSearch"
@@ -903,21 +809,19 @@ export default function AdminDashboard() {
                   id="bookingSearch"
                   type="search"
                   value={searchQuery}
-                  onChange={(
-                    event,
-                  ) =>
+                  onChange={(event) =>
                     setSearchQuery(
-                      event.target
-                        .value,
+                      event.target.value,
                     )
                   }
-                  placeholder="Search by Booking ID or M-Pesa number..."
+                  placeholder="Search by customer name, Booking ID or M-Pesa number..."
                   className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-navy outline-none transition focus:border-orange focus:ring-2 focus:ring-orange/20"
                 />
               </div>
             </div>
 
             {/* Search + filter information */}
+
             <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <p className="text-sm text-slate-500">
                 Click a Booking ID
@@ -926,6 +830,7 @@ export default function AdminDashboard() {
               </p>
 
               {/* Filters */}
+
               <div className="flex flex-wrap gap-2">
                 <FilterButton
                   label="All"
@@ -995,6 +900,7 @@ export default function AdminDashboard() {
             </div>
 
             {/* Results count */}
+
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
               <p className="text-xs text-slate-400">
                 Showing{" "}
@@ -1016,13 +922,15 @@ export default function AdminDashboard() {
                     setSearchQuery(
                       "",
                     );
+
                     setBookingFilter(
                       "all",
                     );
                   }}
                   className="text-xs font-semibold text-orange hover:underline"
                 >
-                  Clear search & filter
+                  Clear search &
+                  filter
                 </button>
               )}
             </div>
@@ -1034,6 +942,10 @@ export default function AdminDashboard() {
                 <tr className="border-b bg-slate-50 text-left text-xs uppercase tracking-wider text-slate-500">
                   <th className="px-6 py-4">
                     Booking
+                  </th>
+
+                  <th className="px-6 py-4">
+                    Customer
                   </th>
 
                   <th className="px-6 py-4">
@@ -1073,6 +985,8 @@ export default function AdminDashboard() {
                         }
                         className="border-b last:border-0 hover:bg-slate-50"
                       >
+                        {/* Booking */}
+
                         <td className="px-6 py-4">
                           <button
                             type="button"
@@ -1097,10 +1011,23 @@ export default function AdminDashboard() {
                           </button>
                         </td>
 
+                        {/* Customer Name */}
+
+                        <td className="px-6 py-4">
+                          <p className="font-medium text-navy">
+                            {booking.customerName ??
+                              "—"}
+                          </p>
+                        </td>
+
+                        {/* M-Pesa Number */}
+
                         <td className="px-6 py-4 text-sm text-slate-700">
                           {booking.phoneNumber ??
                             "—"}
                         </td>
+
+                        {/* Total */}
 
                         <td className="px-6 py-4 text-sm font-medium text-navy">
                           {money(
@@ -1108,11 +1035,15 @@ export default function AdminDashboard() {
                           )}
                         </td>
 
+                        {/* Paid */}
+
                         <td className="px-6 py-4 text-sm font-medium text-green-700">
                           {money(
                             booking.totalPaid,
                           )}
                         </td>
+
+                        {/* Balance */}
 
                         <td className="px-6 py-4 text-sm font-medium text-orange">
                           {money(
@@ -1120,11 +1051,15 @@ export default function AdminDashboard() {
                           )}
                         </td>
 
+                        {/* Payments */}
+
                         <td className="px-6 py-4 text-sm text-slate-700">
                           {
                             booking.paymentCount
                           }
                         </td>
+
+                        {/* Status */}
 
                         <td className="px-6 py-4">
                           <StatusBadge
@@ -1139,7 +1074,7 @@ export default function AdminDashboard() {
                 ) : (
                   <tr>
                     <td
-                      colSpan={7}
+                      colSpan={8}
                       className="px-6 py-12 text-center text-sm text-slate-500"
                     >
                       {searchQuery ||
@@ -1175,6 +1110,8 @@ export default function AdminDashboard() {
               event.stopPropagation()
             }
           >
+            {/* Modal Header */}
+
             <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-white px-6 py-5">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-orange">
@@ -1188,6 +1125,18 @@ export default function AdminDashboard() {
                       .bookingId
                   }
                 </h2>
+
+                {selectedBooking
+                  .booking
+                  .customerName && (
+                  <p className="mt-1 text-sm text-slate-500">
+                    {
+                      selectedBooking
+                        .booking
+                        .customerName
+                    }
+                  </p>
+                )}
               </div>
 
               <button
@@ -1211,43 +1160,86 @@ export default function AdminDashboard() {
               </div>
             ) : (
               <div className="space-y-6 p-6">
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  <DetailCard
-                    label="Adventure"
-                    value={
-                      selectedBooking
-                        .booking
-                        .adventureTitle
-                    }
-                  />
+                {/* Customer Information */}
 
-                  <DetailCard
-                    label="Trip Total"
-                    value={money(
-                      selectedBooking
-                        .booking
-                        .totalAmount,
-                    )}
-                  />
+                <section>
+                  <div className="mb-4">
+                    <h3 className="text-lg font-bold text-navy">
+                      Customer Information
+                    </h3>
+                  </div>
 
-                  <DetailCard
-                    label="Total Paid"
-                    value={money(
-                      selectedBooking
-                        .booking
-                        .totalPaid,
-                    )}
-                  />
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <DetailCard
+                      label="Customer Name"
+                      value={
+                        selectedBooking
+                          .booking
+                          .customerName ??
+                        "Not provided"
+                      }
+                    />
 
-                  <DetailCard
-                    label="Remaining Balance"
-                    value={money(
-                      selectedBooking
-                        .booking
-                        .remainingBalance,
-                    )}
-                  />
-                </div>
+                    <DetailCard
+                      label="Booking ID"
+                      value={
+                        selectedBooking
+                          .booking
+                          .bookingId
+                      }
+                    />
+                  </div>
+                </section>
+
+                {/* Booking Summary */}
+
+                <section>
+                  <div className="mb-4">
+                    <h3 className="text-lg font-bold text-navy">
+                      Booking Summary
+                    </h3>
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <DetailCard
+                      label="Adventure"
+                      value={
+                        selectedBooking
+                          .booking
+                          .adventureTitle
+                      }
+                    />
+
+                    <DetailCard
+                      label="Trip Total"
+                      value={money(
+                        selectedBooking
+                          .booking
+                          .totalAmount,
+                      )}
+                    />
+
+                    <DetailCard
+                      label="Total Paid"
+                      value={money(
+                        selectedBooking
+                          .booking
+                          .totalPaid,
+                      )}
+                    />
+
+                    <DetailCard
+                      label="Remaining Balance"
+                      value={money(
+                        selectedBooking
+                          .booking
+                          .remainingBalance,
+                      )}
+                    />
+                  </div>
+                </section>
+
+                {/* Status */}
 
                 <div className="flex flex-wrap items-center gap-3">
                   <StatusBadge
@@ -1267,6 +1259,8 @@ export default function AdminDashboard() {
                     )}
                   </span>
                 </div>
+
+                {/* Payment History */}
 
                 <section>
                   <div className="mb-4">
@@ -1486,19 +1480,19 @@ function StatusBadge({
   const styles = {
     pending:
       "bg-slate-100 text-slate-700",
+
     partially_paid:
       "bg-orange/10 text-orange",
+
     fully_paid:
       "bg-green-100 text-green-700",
+
     cancelled:
       "bg-red-100 text-red-700",
   };
 
   const label =
-    status.replace(
-      "_",
-      " ",
-    );
+    status.replace("_", " ");
 
   return (
     <span
@@ -1524,8 +1518,10 @@ function PaymentStatusBadge({
   const styles = {
     pending:
       "bg-slate-100 text-slate-700",
+
     success:
       "bg-green-100 text-green-700",
+
     failed:
       "bg-red-100 text-red-700",
   };

@@ -16,9 +16,7 @@ export async function GET(
     // Protect admin API
     // ----------------------------------------
 
-    if (
-      !isAdminRequest(request)
-    ) {
+    if (!isAdminRequest(request)) {
       return NextResponse.json(
         {
           error: "Unauthorized.",
@@ -53,7 +51,7 @@ export async function GET(
         await supabaseServer
           .from("bookings")
           .select(
-            "booking_id, adventure_title, total_amount, total_paid, remaining_balance, status, created_at, updated_at",
+            "booking_id, customer_name, adventure_title, total_amount, total_paid, remaining_balance, status, created_at, updated_at",
           )
           .eq(
             "booking_id",
@@ -131,6 +129,10 @@ export async function GET(
         );
       }
 
+      // --------------------------------------
+      // Return booking + payment history
+      // --------------------------------------
+
       return NextResponse.json({
         success: true,
 
@@ -138,22 +140,25 @@ export async function GET(
           bookingId:
             booking.booking_id,
 
+          customerName:
+            booking.customer_name,
+
           adventureTitle:
             booking.adventure_title,
 
           totalAmount:
             Number(
-              booking.total_amount,
+              booking.total_amount ?? 0,
             ),
 
           totalPaid:
             Number(
-              booking.total_paid,
+              booking.total_paid ?? 0,
             ),
 
           remainingBalance:
             Number(
-              booking.remaining_balance,
+              booking.remaining_balance ?? 0,
             ),
 
           status:
@@ -170,7 +175,8 @@ export async function GET(
           payments ?? []
         ).map(
           (payment) => ({
-            id: payment.id,
+            id:
+              payment.id,
 
             checkoutRequestId:
               payment.checkout_request_id,
@@ -228,7 +234,7 @@ export async function GET(
       await supabaseServer
         .from("bookings")
         .select(
-          "booking_id, adventure_title, total_amount, total_paid, remaining_balance, status, created_at, updated_at",
+          "booking_id, customer_name, adventure_title, total_amount, total_paid, remaining_balance, status, created_at, updated_at",
         )
         .order(
           "created_at",
@@ -328,22 +334,28 @@ export async function GET(
             bookingId:
               booking.booking_id,
 
+            // --------------------------------
+            // CUSTOMER NAME
+            // --------------------------------
+            customerName:
+              booking.customer_name,
+
             adventureTitle:
               booking.adventure_title,
 
             totalAmount:
               Number(
-                booking.total_amount,
+                booking.total_amount ?? 0,
               ),
 
             totalPaid:
               Number(
-                booking.total_paid,
+                booking.total_paid ?? 0,
               ),
 
             remainingBalance:
               Number(
-                booking.remaining_balance,
+                booking.remaining_balance ?? 0,
               ),
 
             status:
@@ -416,6 +428,10 @@ export async function GET(
           booking.status ===
           "pending",
       ).length;
+
+    // ----------------------------------------
+    // Return dashboard data
+    // ----------------------------------------
 
     return NextResponse.json({
       success: true,

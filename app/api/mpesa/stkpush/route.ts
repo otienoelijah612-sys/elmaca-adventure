@@ -1,11 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL;
-
-const supabaseSecretKey =
-  process.env.SUPABASE_SECRET_KEY;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY;
 
 if (!supabaseUrl || !supabaseSecretKey) {
   throw new Error(
@@ -24,21 +21,89 @@ const supabase = createClient(
   },
 );
 
+interface BookingRecord {
+  booking_id: string;
+  adventure_title: string;
+  total_amount: number | string;
+  total_paid: number | string | null;
+  remaining_balance: number | string | null;
+  status: string;
+}
+
+interface MpesaTokenResponse {
+  access_token?: string;
+  expires_in?: string;
+  errorCode?: string;
+  errorMessage?: string;
+}
+
+interface MpesaStkResponse {
+  MerchantRequestID?: string;
+  CheckoutRequestID?: string;
+  ResponseCode?: string;
+  ResponseDescription?: string;
+  CustomerMessage?: string;
+  errorCode?: string;
+  errorMessage?: string;
+}
+
+function normalizeKenyanPhone(phone: string): string | null {
+  let normalized = phone
+    .trim()
+    .replace(/\s+/g, "")
+    .replace(/-/g, "");
+
+  if (normalized.startsWith("+254")) {
+    normalized = normalized.substring(1);
+  } else if (normalized.startsWith("0")) {
+    normalized = `254${normalized.substring(1)}`;
+  } else if (
+    normalized.startsWith("7") ||
+    normalized.startsWith("1")
+  ) {
+    normalized = `254${normalized}`;
+  }
+
+  return /^254[17]\d{8}$/.test(normalized)
+    ? normalized
+    : null;
+}
+
+function getTimestamp(): string {
+  const now = new Date();
+
+  return (
+    now.getUTCFullYear().toString() +
+    String(now.getUTCMonth() + 1).padStart(2, "0") +
+    String(now.getUTCDate()).padStart(2, "0") +
+    String(now.getUTCHours()).padStart(2, "0") +
+    String(now.getUTCMinutes()).padStart(2, "0") +
+    String(now.getUTCSeconds()).padStart(2, "0")
+  );
+}
+
 export async function POST(request: Request) {
   try {
+    const body = await request.json();
+
     const {
       bookingId,
       phoneNumber,
       amount,
       accountReference,
       transactionDesc,
-    } = await request.json();
+    } = body;
 
     // ----------------------------------------
-    // Validate required fields
+    // Validate booking ID
     // ----------------------------------------
 
-    if (!bookingId) {
+    const cleanBookingId =
+      typeof bookingId === "string"
+        ? bookingId.trim()
+        : "";
+
+    if (!cleanBookingId) {
       return NextResponse.json(
         {
           error: "Booking ID is required.",
@@ -47,21 +112,49 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!phoneNumber || !amount) {
+    // ----------------------------------------
+    // Validate phone number
+    // ----------------------------------------
+
+    const cleanPhoneInput =
+      typeof phoneNumber === "string"
+        ? phoneNumber
+        : "";
+
+    if (!cleanPhoneInput.trim()) {
       return NextResponse.json(
         {
           error:
-            "Phone number and amount are required.",
+            "M-Pesa phone number is required.",
         },
         { status: 400 },
       );
     }
 
+    const normalizedPhone =
+      normalizeKenyanPhone(
+        cleanPhoneInput,
+      );
+
+    if (!normalizedPhone) {
+      return NextResponse.json(
+        {
+          error:
+            "Please enter a valid Kenyan M-Pesa phone number.",
+        },
+        { status: 400 },
+      );
+    }
+
+    // ----------------------------------------
+    // Validate amount
+    // ----------------------------------------
+
     const numericAmount = Number(amount);
 
     if (
       !Number.isInteger(numericAmount) ||
-      numericAmount < 1
+      numericAmount <= 0
     ) {
       return NextResponse.json(
         {
@@ -84,11 +177,8 @@ export async function POST(request: Request) {
       .select(
         "booking_id, adventure_title, total_amount, total_paid, remaining_balance, status",
       )
-      .eq(
-        "booking_id",
-        String(bookingId),
-      )
-      .maybeSingle();
+      .eq("booking_id", cleanBookingId)
+      .maybeSingle<BookingRecord>();
 
     if (bookingError) {
       console.error(
@@ -99,7 +189,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error:
-            "Unable to verify booking.",
+            "Unable to verify your booking.",
         },
         { status: 500 },
       );
@@ -116,20 +206,25 @@ export async function POST(request: Request) {
     }
 
     // ----------------------------------------
-    // Validate payment amount
+    // Calculate current balance
     // ----------------------------------------
 
-    const totalAmount =
-      Number(booking.total_amount);
+    const totalAmount = Number(
+      booking.total_amount,
+    );
 
-    const totalPaid =
-      Number(booking.total_paid ?? 0);
+    const totalPaid = Number(
+      booking.total_paid ?? 0,
+    );
 
-    const remainingBalance =
-      Math.max(
-        totalAmount - totalPaid,
-        0,
-      );
+    const remainingBalance = Math.max(
+      totalAmount - totalPaid,
+      0,
+    );
+
+    // ----------------------------------------
+    // Prevent payment after full payment
+    // ----------------------------------------
 
     if (remainingBalance <= 0) {
       return NextResponse.json(
@@ -141,6 +236,10 @@ export async function POST(request: Request) {
       );
     }
 
+    // ----------------------------------------
+    // Prevent overpayment
+    // ----------------------------------------
+
     if (
       numericAmount >
       remainingBalance
@@ -148,14 +247,14 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error:
-            `Payment cannot exceed the remaining balance of KSh ${remainingBalance}.`,
+            `Payment cannot exceed the remaining balance of KSh ${remainingBalance.toLocaleString()}.`,
         },
         { status: 400 },
       );
     }
 
     // ----------------------------------------
-    // Environment variables
+    // M-Pesa configuration
     // ----------------------------------------
 
     const consumerKey =
@@ -180,55 +279,16 @@ export async function POST(request: Request) {
       !shortcode ||
       !callbackUrl
     ) {
+      console.error(
+        "Missing M-Pesa environment configuration.",
+      );
+
       return NextResponse.json(
         {
           error:
-            "M-Pesa environment variables are not configured.",
+            "M-Pesa payment service is not configured.",
         },
         { status: 500 },
-      );
-    }
-
-    // ----------------------------------------
-    // Normalize Kenyan phone number
-    // ----------------------------------------
-
-    let normalizedPhone =
-      String(phoneNumber)
-        .trim()
-        .replace(/\s+/g, "")
-        .replace(/-/g, "");
-
-    if (
-      normalizedPhone.startsWith("+254")
-    ) {
-      normalizedPhone =
-        normalizedPhone.substring(1);
-    } else if (
-      normalizedPhone.startsWith("0")
-    ) {
-      normalizedPhone =
-        "254" +
-        normalizedPhone.substring(1);
-    } else if (
-      normalizedPhone.startsWith("7") ||
-      normalizedPhone.startsWith("1")
-    ) {
-      normalizedPhone =
-        "254" + normalizedPhone;
-    }
-
-    if (
-      !/^254[17]\d{8}$/.test(
-        normalizedPhone,
-      )
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            "Please enter a valid Kenyan M-Pesa phone number.",
-        },
-        { status: 400 },
       );
     }
 
@@ -246,43 +306,28 @@ export async function POST(request: Request) {
         {
           method: "GET",
           headers: {
-            Authorization:
-              `Basic ${credentials}`,
+            Authorization: `Basic ${credentials}`,
           },
           cache: "no-store",
         },
       );
 
     const tokenData =
-      await tokenResponse.json();
+      (await tokenResponse.json()) as MpesaTokenResponse;
 
-    if (!tokenResponse.ok) {
+    if (
+      !tokenResponse.ok ||
+      !tokenData.access_token
+    ) {
       console.error(
-        "M-Pesa token error:",
-        JSON.stringify(
-          tokenData,
-          null,
-          2,
-        ),
+        "M-Pesa token request failed:",
+        tokenData,
       );
 
       return NextResponse.json(
         {
           error:
-            "Failed to obtain M-Pesa access token.",
-        },
-        { status: 502 },
-      );
-    }
-
-    const accessToken =
-      tokenData?.access_token;
-
-    if (!accessToken) {
-      return NextResponse.json(
-        {
-          error:
-            "M-Pesa access token was not returned.",
+            "Unable to connect to M-Pesa.",
         },
         { status: 502 },
       );
@@ -292,28 +337,11 @@ export async function POST(request: Request) {
     // Generate timestamp
     // ----------------------------------------
 
-    const now = new Date();
-
     const timestamp =
-      now.getUTCFullYear().toString() +
-      String(
-        now.getUTCMonth() + 1,
-      ).padStart(2, "0") +
-      String(
-        now.getUTCDate(),
-      ).padStart(2, "0") +
-      String(
-        now.getUTCHours(),
-      ).padStart(2, "0") +
-      String(
-        now.getUTCMinutes(),
-      ).padStart(2, "0") +
-      String(
-        now.getUTCSeconds(),
-      ).padStart(2, "0");
+      getTimestamp();
 
     // ----------------------------------------
-    // Generate password
+    // Generate STK password
     // ----------------------------------------
 
     const password = Buffer.from(
@@ -328,13 +356,17 @@ export async function POST(request: Request) {
       accountReference ||
         booking.booking_id ||
         "ELMACA",
-    ).substring(0, 12);
+    )
+      .trim()
+      .substring(0, 12);
 
     const description = String(
       transactionDesc ||
         booking.adventure_title ||
         "Adventure Booking",
-    ).substring(0, 13);
+    )
+      .trim()
+      .substring(0, 13);
 
     // ----------------------------------------
     // Send STK Push
@@ -347,11 +379,8 @@ export async function POST(request: Request) {
           method: "POST",
 
           headers: {
-            Authorization:
-              `Bearer ${accessToken}`,
-
-            "Content-Type":
-              "application/json",
+            Authorization: `Bearer ${tokenData.access_token}`,
+            "Content-Type": "application/json",
           },
 
           body: JSON.stringify({
@@ -392,7 +421,7 @@ export async function POST(request: Request) {
       );
 
     const stkData =
-      await stkResponse.json();
+      (await stkResponse.json()) as MpesaStkResponse;
 
     console.log(
       "M-Pesa STK response:",
@@ -404,43 +433,61 @@ export async function POST(request: Request) {
     );
 
     // ----------------------------------------
-    // Make sure Safaricom accepted request
+    // Handle failed STK request
     // ----------------------------------------
 
     if (
       !stkResponse.ok ||
-      stkData?.ResponseCode !== "0"
+      stkData.ResponseCode !== "0"
     ) {
       return NextResponse.json(
-        stkData,
+        {
+          error:
+            stkData.errorMessage ||
+            stkData.CustomerMessage ||
+            stkData.ResponseDescription ||
+            "M-Pesa payment could not be initiated.",
+          details:
+            process.env.NODE_ENV ===
+            "development"
+              ? stkData
+              : undefined,
+        },
         {
           status:
             stkResponse.ok
               ? 400
-              : stkResponse.status,
+              : 502,
         },
       );
     }
 
+    // ----------------------------------------
+    // Confirm CheckoutRequestID
+    // ----------------------------------------
+
     const checkoutRequestId =
-      stkData?.CheckoutRequestID;
+      stkData.CheckoutRequestID;
 
     const merchantRequestId =
-      stkData?.MerchantRequestID;
+      stkData.MerchantRequestID;
 
     if (!checkoutRequestId) {
+      console.error(
+        "M-Pesa did not return CheckoutRequestID.",
+      );
+
       return NextResponse.json(
         {
           error:
-            "M-Pesa did not return a CheckoutRequestID.",
-          details: stkData,
+            "M-Pesa accepted the request but did not return a payment reference.",
         },
         { status: 502 },
       );
     }
 
     // ----------------------------------------
-    // Save/link payment to booking
+    // Save pending payment
     // ----------------------------------------
 
     const {
@@ -448,7 +495,9 @@ export async function POST(request: Request) {
       error: existingPaymentError,
     } = await supabase
       .from("payments")
-      .select("*")
+      .select(
+        "checkout_request_id, status, booking_id",
+      )
       .eq(
         "checkout_request_id",
         checkoutRequestId,
@@ -457,41 +506,12 @@ export async function POST(request: Request) {
 
     if (existingPaymentError) {
       console.error(
-        "Payment lookup error:",
+        "Existing payment lookup error:",
         existingPaymentError,
       );
     }
 
-    if (existingPayment) {
-      // Callback may have arrived extremely quickly.
-      // Preserve its successful result and attach booking.
-      const {
-        error: updatePaymentError,
-      } = await supabase
-        .from("payments")
-        .update({
-          booking_id:
-            String(booking.booking_id),
-
-          adventure_title:
-            booking.adventure_title,
-
-          phone_number:
-            normalizedPhone,
-        })
-        .eq(
-          "checkout_request_id",
-          checkoutRequestId,
-        );
-
-      if (updatePaymentError) {
-        console.error(
-          "Payment booking link error:",
-          updatePaymentError,
-        );
-      }
-    } else {
-      // Normal case: create pending payment record.
+    if (!existingPayment) {
       const {
         error: paymentInsertError,
       } = await supabase
@@ -504,7 +524,7 @@ export async function POST(request: Request) {
             merchantRequestId ?? null,
 
           booking_id:
-            String(booking.booking_id),
+            booking.booking_id,
 
           adventure_title:
             booking.adventure_title,
@@ -539,16 +559,61 @@ export async function POST(request: Request) {
           "Payment insert error:",
           paymentInsertError,
         );
+
+        return NextResponse.json(
+          {
+            error:
+              "Payment request was sent, but we could not save the payment record. Please contact Elmaca Adventure before trying again.",
+          },
+          { status: 500 },
+        );
       }
+    } else if (
+      existingPayment.booking_id !==
+      booking.booking_id
+    ) {
+      console.error(
+        "Checkout request belongs to a different booking:",
+        {
+          checkoutRequestId,
+          existingBookingId:
+            existingPayment.booking_id,
+          requestedBookingId:
+            booking.booking_id,
+        },
+      );
+
+      return NextResponse.json(
+        {
+          error:
+            "This payment request is already associated with another booking.",
+        },
+        { status: 409 },
+      );
     }
 
     // ----------------------------------------
-    // Return STK response to website
+    // Return successful STK response
     // ----------------------------------------
 
     return NextResponse.json(
       {
-        ...stkData,
+        success: true,
+
+        ResponseCode:
+          stkData.ResponseCode,
+
+        ResponseDescription:
+          stkData.ResponseDescription,
+
+        CustomerMessage:
+          stkData.CustomerMessage,
+
+        MerchantRequestID:
+          merchantRequestId,
+
+        CheckoutRequestID:
+          checkoutRequestId,
 
         bookingId:
           booking.booking_id,
@@ -570,7 +635,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         error:
-          "Failed to initiate M-Pesa payment.",
+          "Failed to initiate M-Pesa payment. Please try again.",
       },
       { status: 500 },
     );

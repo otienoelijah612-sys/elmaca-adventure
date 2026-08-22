@@ -1,11 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL;
-
-const supabaseSecretKey =
-  process.env.SUPABASE_SECRET_KEY;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY;
 
 if (!supabaseUrl || !supabaseSecretKey) {
   throw new Error(
@@ -26,34 +23,25 @@ const supabase = createClient(
 
 export async function GET(request: Request) {
   try {
-    const { searchParams } =
-      new URL(request.url);
-
-    const checkoutRequestId =
-      searchParams.get(
-        "checkoutRequestId",
-      );
+    const { searchParams } = new URL(request.url);
+    const checkoutRequestId = searchParams.get(
+      "checkoutRequestId",
+    );
 
     if (!checkoutRequestId) {
       return NextResponse.json(
         {
-          error:
-            "checkoutRequestId is required.",
+          error: "checkoutRequestId is required.",
         },
         { status: 400 },
       );
     }
 
-    console.log(
-      "Checking M-Pesa payment:",
-      checkoutRequestId,
-    );
-
     // ----------------------------------------
     // Find payment
     // ----------------------------------------
 
-    const { data: payment, error } =
+    const { data: payment, error: paymentError } =
       await supabase
         .from("payments")
         .select("*")
@@ -63,48 +51,33 @@ export async function GET(request: Request) {
         )
         .maybeSingle();
 
-    if (error) {
+    if (paymentError) {
       console.error(
-        "Supabase payment lookup error:",
-        error,
+        "Payment lookup error:",
+        paymentError,
       );
 
       return NextResponse.json(
         {
-          error:
-            "Unable to check payment status.",
-          details: error.message,
+          error: "Unable to check payment status.",
         },
         { status: 500 },
       );
     }
 
     // ----------------------------------------
-    // Payment has not been created yet
+    // Payment record not available yet
     // ----------------------------------------
 
     if (!payment) {
-      console.log(
-        "Payment not found:",
-        checkoutRequestId,
-      );
-
       return NextResponse.json({
         status: "pending",
         message:
           "Waiting for M-Pesa payment confirmation.",
         checkoutRequestId,
+        booking: null,
       });
     }
-
-    console.log(
-      "Payment found:",
-      JSON.stringify(
-        payment,
-        null,
-        2,
-      ),
-    );
 
     // ----------------------------------------
     // Find related booking
@@ -121,6 +94,7 @@ export async function GET(request: Request) {
         .select(
           `
             booking_id,
+            customer_name,
             adventure_title,
             total_amount,
             total_paid,
@@ -138,96 +112,87 @@ export async function GET(request: Request) {
 
       if (bookingError) {
         console.error(
-          "Supabase booking lookup error:",
+          "Booking lookup error:",
           bookingError,
         );
       } else {
         booking = bookingData;
-
-        console.log(
-          "Booking found:",
-          JSON.stringify(
-            booking,
-            null,
-            2,
-          ),
-        );
       }
     }
 
     // ----------------------------------------
-    // Return payment + latest booking data
+    // Return payment status
     // ----------------------------------------
 
     return NextResponse.json({
-      // Payment information
       status: payment.status,
 
       resultCode:
-        payment.result_code,
+        payment.result_code ?? null,
 
       resultDesc:
-        payment.result_desc,
+        payment.result_desc ?? null,
 
-      amount:
-        payment.amount,
+      amount: Number(payment.amount ?? 0),
 
       receiptNumber:
-        payment.receipt_number,
+        payment.receipt_number ?? null,
 
       phoneNumber:
-        payment.phone_number,
+        payment.phone_number ?? null,
 
       transactionDate:
-        payment.transaction_date,
+        payment.transaction_date ?? null,
 
       checkoutRequestId:
         payment.checkout_request_id,
 
       merchantRequestId:
-        payment.merchant_request_id,
+        payment.merchant_request_id ?? null,
 
       adventureTitle:
-        payment.adventure_title,
+        payment.adventure_title ?? null,
 
       receivedAt:
-        payment.received_at,
+        payment.received_at ?? null,
 
       createdAt:
-        payment.created_at,
+        payment.created_at ?? null,
 
-      // Booking information
       booking: booking
         ? {
             bookingId:
               booking.booking_id,
+
+            customerName:
+              booking.customer_name ?? null,
 
             adventureTitle:
               booking.adventure_title,
 
             totalAmount:
               Number(
-                booking.total_amount,
+                booking.total_amount ?? 0,
               ),
 
             totalPaid:
               Number(
-                booking.total_paid,
+                booking.total_paid ?? 0,
               ),
 
             remainingBalance:
               Number(
-                booking.remaining_balance,
+                booking.remaining_balance ?? 0,
               ),
 
             bookingStatus:
               booking.status,
 
             createdAt:
-              booking.created_at,
+              booking.created_at ?? null,
 
             updatedAt:
-              booking.updated_at,
+              booking.updated_at ?? null,
           }
         : null,
     });
